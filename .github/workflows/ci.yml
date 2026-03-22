@@ -46,3 +46,54 @@ jobs:
 
     - name: Test
       run: dotnet test --no-build --verbosity normal
+
+  merge_develop:
+    name: Merge into develop if build passes
+    needs: build
+    if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') }}
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout (full history)
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        persist-credentials: true
+
+    - name: Configure Git
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+
+    - name: Attempt merge into develop
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        set -e
+        SOURCE_BRANCH=${GITHUB_REF#refs/heads/}
+        echo "Source branch: $SOURCE_BRANCH"
+
+        # Ensure we have origin refs
+        git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+        git fetch origin
+
+        # Prepare develop branch: checkout existing or create new
+        if git ls-remote --exit-code --heads origin develop; then
+          echo "Develop exists on remote, checking out"
+          git checkout develop
+          git reset --hard origin/develop
+        else
+          echo "Develop does not exist, creating new branch"
+          git checkout -b develop
+        fi
+
+        # Merge source into develop
+        echo "Merging origin/$SOURCE_BRANCH into develop"
+        if git merge --no-edit --no-ff "origin/$SOURCE_BRANCH"; then
+          echo "Merge successful, pushing develop to origin"
+          git push origin develop
+        else
+          echo "Merge failed due to conflicts, aborting and not pushing"
+          git merge --abort || true
+          exit 1
+        fi
