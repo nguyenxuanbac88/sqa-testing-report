@@ -45,7 +45,9 @@ jobs:
       run: dotnet build --no-restore --no-incremental --configuration Release
 
     - name: Test
-      run: dotnet test --no-build --verbosity normal
+      # Remove --no-build to avoid VSTest invocation issues when test adapter/SDK mismatch.
+      # Let dotnet test perform its own build validation to ensure correct test invocation.
+      run: dotnet test --verbosity normal
 
   merge_develop:
     name: Merge into develop if build passes
