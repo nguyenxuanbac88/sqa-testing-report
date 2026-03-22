@@ -2,7 +2,7 @@ name: .NET CI
 
 on:
   push:
-    branches: [ "master", "main" ]
+    branches: [ "**" ]   # 🔥 chạy cho tất cả các nhánh
   pull_request:
     branches: [ "master", "main" ]
 
@@ -30,29 +30,27 @@ jobs:
     - name: Install dotnet-format
       run: |
         dotnet tool install -g dotnet-format || true
-        echo "## Add dotnet tools to PATH"
         echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
     - name: Restore
       run: dotnet restore
 
-    - name: Check code style with dotnet format
-      run: |
-        # verify-no-changes will fail the job if formatting is required
-        dotnet format --verify-no-changes
+    - name: Check code style
+      run: dotnet format --verify-no-changes
 
     - name: Build
-      run: dotnet build --no-restore --no-incremental --configuration Release
+      run: dotnet build --no-restore --configuration Release
 
     - name: Test
-      # Remove --no-build to avoid VSTest invocation issues when test adapter/SDK mismatch.
-      # Let dotnet test perform its own build validation to ensure correct test invocation.
       run: dotnet test --verbosity normal
 
   merge_develop:
     name: Merge into develop if build passes
     needs: build
-    if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') }}
+
+    # 🔥 chỉ merge khi push vào main/master (tránh merge nhánh test linh tinh)
+    if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') }}
+
     runs-on: ubuntu-latest
 
     steps:
@@ -60,42 +58,36 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-        persist-credentials: true
 
     - name: Configure Git
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
 
-    - name: Attempt merge into develop
+    - name: Merge into develop
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         set -e
+
         SOURCE_BRANCH=${GITHUB_REF#refs/heads/}
         echo "Source branch: $SOURCE_BRANCH"
 
-        # Ensure we have origin refs
-        git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+        git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
         git fetch origin
 
-        # Prepare develop branch: checkout existing or create new
-        if git ls-remote --exit-code --heads origin develop; then
-          echo "Develop exists on remote, checking out"
-          git checkout develop
-          git reset --hard origin/develop
+        # checkout hoặc tạo develop
+        if git show-ref --verify --quiet refs/remotes/origin/develop; then
+          git checkout -B develop origin/develop
         else
-          echo "Develop does not exist, creating new branch"
           git checkout -b develop
         fi
 
-        # Merge source into develop
-        echo "Merging origin/$SOURCE_BRANCH into develop"
-        if git merge --no-edit --no-ff "origin/$SOURCE_BRANCH"; then
-          echo "Merge successful, pushing develop to origin"
+        # merge
+        if git merge --no-ff origin/$SOURCE_BRANCH -m "Auto merge from $SOURCE_BRANCH"; then
           git push origin develop
         else
-          echo "Merge failed due to conflicts, aborting and not pushing"
           git merge --abort || true
+          echo "Merge conflict - stop pipeline"
           exit 1
         fi
