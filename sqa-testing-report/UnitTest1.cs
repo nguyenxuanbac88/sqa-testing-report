@@ -1,6 +1,6 @@
 namespace sqa_testing_report
 {
-    public class Tests
+    public class SampleTests
     {
         [SetUp]
         public void Setup()
