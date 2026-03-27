@@ -1,171 +1,121 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using ClosedXML.Excel;
+Ôªøusing ClosedXML.Excel;
 using sqa_testing_report.Models;
 
 namespace sqa_testing_report.Services
 {
-    // D?ch v? ??c/ghi d? li?u testcase t? file Excel
     public class ExcelTestCaseService
     {
         private readonly string _excelPath;
 
-        // Kh?i t?o v?i ???ng d?n file excel (m?c ??nh Data/DataTest.xlsx)
         public ExcelTestCaseService(string excelPath = null)
         {
             _excelPath = excelPath ?? Path.Combine(AppContext.BaseDirectory, "Data", "DataTest.xlsx");
         }
 
-        // ??c t?t c? b??c c?a 1 test case d?a trÍn sheetName v‡ testCaseId
-        // Tr? v? danh s·ch TestCaseStep
+        // ƒê√£ n√¢ng c·∫•p h√†m ƒë·ªçc an to√†n h∆°n b·∫±ng .Value.ToString()
+        private string GetCellValue(IXLCell cell)
+        {
+            try
+            {
+                if (cell.IsMerged())
+                {
+                    return cell.MergedRange().FirstCell().Value.ToString()?.Trim() ?? string.Empty;
+                }
+                return cell.Value.ToString()?.Trim() ?? string.Empty;
+            }
+            catch { return string.Empty; }
+        }
+
+        private void SetCellValue(IXLCell cell, string value)
+        {
+            if (cell.IsMerged())
+            {
+                cell.MergedRange().FirstCell().Value = value;
+            }
+            else
+            {
+                cell.Value = value;
+            }
+        }
+
         public List<TestCaseStep> ReadTestCaseById(string sheetName, string testCaseId)
         {
-            if (string.IsNullOrWhiteSpace(sheetName))
-                throw new ArgumentException("TÍn sheet khÙng ???c r?ng", nameof(sheetName));
-
-            if (string.IsNullOrWhiteSpace(testCaseId))
-                throw new ArgumentException("TestCase ID khÙng ???c r?ng", nameof(testCaseId));
-
             if (!File.Exists(_excelPath))
-                throw new FileNotFoundException("File Excel khÙng t?n t?i", _excelPath);
+                throw new FileNotFoundException("File Excel kh√¥ng t·ªìn t·∫°i", _excelPath);
 
             using var wb = new XLWorkbook(_excelPath);
-
-            if (!wb.Worksheets.Any(ws => string.Equals(ws.Name, sheetName, StringComparison.OrdinalIgnoreCase)))
-                throw new ArgumentException($"Sheet '{sheetName}' khÙng t?n t?i trong file Excel");
-
             var ws = wb.Worksheet(sheetName);
-
-            // TÏm h‡ng tiÍu ?? (header row) - gi? ??nh l‡ h‡ng ??u tiÍn cÛ c·c header
             var headerRow = ws.FirstRowUsed();
-            if (headerRow == null)
-                return new List<TestCaseStep>();
+            if (headerRow == null) return new List<TestCaseStep>();
 
-            // X‚y b?ng map t? tÍn c?t sang index
             var headerCells = headerRow.Cells().Select((c, idx) => new { Name = (c.GetString() ?? string.Empty).Trim(), Index = c.Address.ColumnNumber })
                                                .Where(h => !string.IsNullOrEmpty(h.Name))
                                                .ToDictionary(h => h.Name, h => h.Index, StringComparer.OrdinalIgnoreCase);
 
-            // Danh s·ch tÍn c?t m‡ ta quan t‚m - cÛ th? m? r?ng ho?c ch?nh n?u header kh·c
-            string[] neededColumns = new[] {
-                "No.",
-                "Test Requirement ID",
-                "Test Case ID",
-                "Test Objective",
-                "Pre-conditions",
-                "Step #",
-                "Step Action",
-                "Test Data",
-                "Expected Result",
-                "Actual Result",
-                "Status",
-                "Screenshots"
-            };
-
-            // TÏm c?t Test Case ID
             if (!headerCells.TryGetValue("Test Case ID", out int tcidCol))
-            {
-                // th? c·c bi?n th? tÍn c?t kh·c (n?u cÛ) - vi?t thÍm rules n?u c?n
-                var alt = headerCells.Keys.FirstOrDefault(k => k.IndexOf("Test Case", StringComparison.OrdinalIgnoreCase) >= 0);
-                if (alt != null)
-                    tcidCol = headerCells[alt];
-                else
-                    throw new ArgumentException("KhÙng tÏm th?y c?t 'Test Case ID' trong sheet");
-            }
+                throw new ArgumentException("Kh√¥ng t√¨m th·∫•y c·ªôt 'Test Case ID'");
 
             var results = new List<TestCaseStep>();
 
-            // Duy?t t? h‡ng k? ti?p c?a header ??n h?t d? li?u
             foreach (var row in ws.RowsUsed().Skip(1))
             {
-                var cellTcid = row.Cell(tcidCol).GetString()?.Trim();
+                var cellTcid = GetCellValue(row.Cell(tcidCol));
+
                 if (string.Equals(cellTcid, testCaseId, StringComparison.OrdinalIgnoreCase))
                 {
                     var step = new TestCaseStep();
 
-                    // L?y t?ng tr??ng n?u c?t t?n t?i
+                    // ƒê√£ b·ªï sung l·∫•y c·ªôt Step #
                     headerCells.TryGetValue("No.", out int noCol);
-                    headerCells.TryGetValue("Test Requirement ID", out int reqCol);
-                    headerCells.TryGetValue("Test Objective", out int objCol);
-                    headerCells.TryGetValue("Pre-conditions", out int preCol);
-                    headerCells.TryGetValue("Step #", out int stepNumCol);
+                    headerCells.TryGetValue("Step #", out int stepNumCol); // <-- FIX ·ªû ƒê√ÇY
                     headerCells.TryGetValue("Step Action", out int actionCol);
                     headerCells.TryGetValue("Test Data", out int dataCol);
                     headerCells.TryGetValue("Expected Result", out int expCol);
-                    headerCells.TryGetValue("Actual Result", out int actCol);
-                    headerCells.TryGetValue("Status", out int statusCol);
-                    headerCells.TryGetValue("Screenshots", out int shotCol);
 
-                    step.No = noCol > 0 ? row.Cell(noCol).GetString() : string.Empty;
-                    step.TestRequirementID = reqCol > 0 ? row.Cell(reqCol).GetString() : string.Empty;
+                    step.No = noCol > 0 ? GetCellValue(row.Cell(noCol)) : string.Empty;
                     step.TestCaseID = cellTcid;
-                    step.TestObjective = objCol > 0 ? row.Cell(objCol).GetString() : string.Empty;
-                    step.PreConditions = preCol > 0 ? row.Cell(preCol).GetString() : string.Empty;
-                    step.StepNumber = stepNumCol > 0 ? row.Cell(stepNumCol).GetString() : string.Empty;
-                    step.StepAction = actionCol > 0 ? row.Cell(actionCol).GetString() : string.Empty;
-                    step.TestData = dataCol > 0 ? row.Cell(dataCol).GetString() : string.Empty;
-                    step.ExpectedResult = expCol > 0 ? row.Cell(expCol).GetString() : string.Empty;
-                    step.ActualResult = actCol > 0 ? row.Cell(actCol).GetString() : string.Empty;
-                    step.Status = statusCol > 0 ? row.Cell(statusCol).GetString() : string.Empty;
-                    step.Screenshots = shotCol > 0 ? row.Cell(shotCol).GetString() : string.Empty;
+                    step.StepNumber = stepNumCol > 0 ? GetCellValue(row.Cell(stepNumCol)) : string.Empty; // <-- FIX ·ªû ƒê√ÇY
+                    step.StepAction = actionCol > 0 ? GetCellValue(row.Cell(actionCol)) : string.Empty;
+                    step.TestData = dataCol > 0 ? GetCellValue(row.Cell(dataCol)) : string.Empty;
+                    step.ExpectedResult = expCol > 0 ? GetCellValue(row.Cell(expCol)) : string.Empty;
                     step.RowNumber = row.RowNumber();
 
                     results.Add(step);
                 }
             }
-
             return results;
         }
 
-        // Ghi c?p nh?t 1 danh s·ch step (vÌ d? c?p nh?t ActualResult/Status) tr? l?i sheet
-        // H‡m n‡y s? ghi d?a trÍn RowNumber c?a TestCaseStep
         public void WriteTestCaseSteps(string sheetName, List<TestCaseStep> stepsToUpdate)
         {
-            if (string.IsNullOrWhiteSpace(sheetName))
-                throw new ArgumentException("TÍn sheet khÙng ???c r?ng", nameof(sheetName));
-
-            if (stepsToUpdate == null || stepsToUpdate.Count == 0)
-                return;
-
-            if (!File.Exists(_excelPath))
-                throw new FileNotFoundException("File Excel khÙng t?n t?i", _excelPath);
-
             using var wb = new XLWorkbook(_excelPath);
-
-            if (!wb.Worksheets.Any(ws => string.Equals(ws.Name, sheetName, StringComparison.OrdinalIgnoreCase)))
-                throw new ArgumentException($"Sheet '{sheetName}' khÙng t?n t?i trong file Excel");
-
             var ws = wb.Worksheet(sheetName);
             var headerRow = ws.FirstRowUsed();
-            if (headerRow == null)
-                throw new InvalidOperationException("Sheet khÙng cÛ header");
 
             var headerCells = headerRow.Cells().Select((c, idx) => new { Name = (c.GetString() ?? string.Empty).Trim(), Index = c.Address.ColumnNumber })
                                                .Where(h => !string.IsNullOrEmpty(h.Name))
                                                .ToDictionary(h => h.Name, h => h.Index, StringComparer.OrdinalIgnoreCase);
 
-            // TÏm c·c c?t c?n c?p nh?t
             headerCells.TryGetValue("Actual Result", out int actCol);
             headerCells.TryGetValue("Status", out int statusCol);
             headerCells.TryGetValue("Screenshots", out int shotCol);
 
             foreach (var step in stepsToUpdate)
             {
-                if (step.RowNumber <= 0)
-                    continue; // b? qua n?u khÙng bi?t row
+                if (step.RowNumber <= 0) continue;
 
                 var row = ws.Row(step.RowNumber);
-                if (actCol > 0)
-                    row.Cell(actCol).Value = step.ActualResult ?? string.Empty;
-                if (statusCol > 0)
-                    row.Cell(statusCol).Value = step.Status ?? string.Empty;
-                if (shotCol > 0)
-                    row.Cell(shotCol).Value = step.Screenshots ?? string.Empty;
-            }
 
-            // L?u ?Ë file
+                // ƒê√£ s·ª≠a l·∫°i th√†nh != null ƒë·ªÉ cho ph√©p x√≥a d·ªØ li·ªáu c≈© (ghi ƒë√® chu·ªói r·ªóng)
+                if (actCol > 0 && step.ActualResult != null)
+                    SetCellValue(row.Cell(actCol), step.ActualResult);
+
+                if (statusCol > 0 && step.Status != null)
+                    SetCellValue(row.Cell(statusCol), step.Status);
+
+                if (shotCol > 0 && step.Screenshots != null)
+                    SetCellValue(row.Cell(shotCol), step.Screenshots);
+            }
             wb.Save();
         }
     }

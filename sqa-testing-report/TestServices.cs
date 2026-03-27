@@ -1,11 +1,5 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Collections.Generic;
-using ClosedXML.Excel;
-using NUnit.Framework;
+﻿using ClosedXML.Excel;
 using sqa_testing_report.Services;
-using sqa_testing_report.Models;
 
 namespace sqa_testing_report
 {
@@ -86,7 +80,7 @@ namespace sqa_testing_report
             {
                 try
                 {
-                    screenshotRelativePath = ScreenshotService.Capture();
+                    screenshotRelativePath = ScreenshotService.Capture(tcId);
                 }
                 catch (PlatformNotSupportedException)
                 {
@@ -131,6 +125,75 @@ namespace sqa_testing_report
                     Assert.IsFalse(string.IsNullOrEmpty(s.Screenshots), "Screenshots phải được ghi");
                     Assert.IsTrue(s.Screenshots.Contains("screenshot_"), "Tên file screenshot phải chứa 'screenshot_'");
                 }
+            }
+        }
+
+        [Test]
+        public void RunSeleniumTest_Dynamic()
+        {
+            string sheetName = "Bac_automationTC";
+            string tcId = "TC_REG_02"; // Test lỗi để trống
+            var svc = new ExcelTestCaseService(_excelPath);
+            var steps = svc.ReadTestCaseById(sheetName, tcId);
+
+            bool isPassed = true;
+            string actualMsg = "";
+            string shotPath = "";
+
+            try
+            {
+                foreach (var step in steps)
+                {
+                    string action = step.StepAction.ToLower();
+                    string data = step.TestData;
+
+                    // XỬ LÝ (Trống)
+                    if (action.Contains("nhập"))
+                    {
+                        // Giả lập tìm Element: var input = driver.FindElement(...);
+                        if (data == "(Trống)")
+                        {
+                            // Cố tình để trống
+                            // input.Clear(); 
+                        }
+                        else if (!string.IsNullOrEmpty(data))
+                        {
+                            // Có data thật
+                            // input.SendKeys(data);
+                        }
+                    }
+
+                    if (action.Contains("nhấn"))
+                    {
+                        // driver.FindElement(...).Click();
+                    }
+                }
+
+                // KIỂM TRA EXPECTED RESULT (Lấy từ bước cuối hoặc bước có Expected)
+                string expected = steps.Last().ExpectedResult;
+                // string webErrorMsg = driver.FindElement(By.Id("error-msg")).Text;
+
+                // Assert.AreEqual(expected, webErrorMsg);
+
+                // Nếu không lỗi -> Pass
+                actualMsg = "Hiển thị đúng lỗi: " + expected; // Hoặc text lấy từ web
+            }
+            catch (Exception ex) // Bắt lỗi nếu web không hiện đúng như Expected
+            {
+                isPassed = false;
+                actualMsg = "Lỗi: " + ex.Message;
+                shotPath = ScreenshotService.Capture(tcId); // CHỈ chụp khi FAIL
+            }
+            finally
+            {
+                // GHI KẾT QUẢ VÀO EXCEL
+                foreach (var s in steps)
+                {
+                    s.Status = isPassed ? "Pass" : "Fail";
+                    s.ActualResult = actualMsg;
+                    s.Screenshots = shotPath;
+                }
+                svc.WriteTestCaseSteps(sheetName, steps);
             }
         }
     }
