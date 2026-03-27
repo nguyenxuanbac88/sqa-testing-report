@@ -80,20 +80,29 @@ namespace sqa_testing_report
 
             // Chụp màn hình và lấy đường dẫn tương đối trả về
             string screenshotRelativePath = null;
-            try
+
+            // Guard runtime platform trước khi gọi API Windows-only để tránh cảnh báo CA1416
+            if (OperatingSystem.IsWindows())
             {
-                screenshotRelativePath = ScreenshotService.Capture();
+                try
+                {
+                    screenshotRelativePath = ScreenshotService.Capture();
+                }
+                catch (PlatformNotSupportedException)
+                {
+                    // Nếu không hỗ trợ chụp trên nền tảng này, bỏ qua phần screenshot nhưng vẫn test read/write
+                    screenshotRelativePath = null;
+                }
+                catch (Exception ex)
+                {
+                    // Không bắt buộc dừng test nếu chụp ảnh lỗi — ghi log và tiếp tục
+                    TestContext.WriteLine("Không thể chụp màn hình: " + ex.Message);
+                    screenshotRelativePath = null;
+                }
             }
-            catch (PlatformNotSupportedException)
+            else
             {
-                // Nếu không hỗ trợ chụp trên nền tảng này, bỏ qua phần screenshot nhưng vẫn test read/write
-                screenshotRelativePath = null;
-            }
-            catch (Exception ex)
-            {
-                // Không bắt buộc dừng test nếu chụp ảnh lỗi — ghi log và tiếp tục
-                TestContext.WriteLine("Không thể chụp màn hình: " + ex.Message);
-                screenshotRelativePath = null;
+                TestContext.WriteLine("Bỏ qua chụp màn hình: nền tảng không phải Windows");
             }
 
             // Cập nhật ActualResult, Status và Screenshots cho mỗi bước
