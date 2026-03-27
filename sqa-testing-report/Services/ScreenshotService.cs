@@ -23,39 +23,41 @@ namespace sqa_testing_report.Services
         /// </summary>
         /// <param name="saveDirectoryRelative">Th? m?c t??ng ??i ?? l?u, ví d? "Data/Screenshots"</param>
         /// <returns>???ng d?n t??ng ??i (ho?c tuy?t ??i n?u không tìm ???c repo root) c?a file ?nh ?ã l?u</returns>
-        public static string Capture(string saveDirectoryRelative = "Data\\Screenshots")
+        public static string Capture(string saveDirectoryRelative = "Data/Screenshots")
         {
             // Xác ??nh kích th??c màn hình chính
             int width = GetSystemMetrics(SM_CXSCREEN);
             int height = GetSystemMetrics(SM_CYSCREEN);
 
-            using var bmp = new Bitmap(width, height);
-            using (var g = Graphics.FromImage(bmp))
+            using (Bitmap bmp = new Bitmap(width, height))
             {
-                g.CopyFromScreen(0, 0, 0, 0, new Size(width, height));
+                using (Graphics g = Graphics.FromImage(bmp))
+                {
+                    g.CopyFromScreen(0, 0, 0, 0, new Size(width, height));
+                }
+
+                // Tìm th? m?c root c?a repo (d?a trên .csproj)
+                string start = AppContext.BaseDirectory;
+                string repoRoot = FindRepoRoot(start);
+
+                string targetRoot = repoRoot ?? start;
+                string targetDir = Path.Combine(targetRoot, saveDirectoryRelative);
+                Directory.CreateDirectory(targetDir);
+
+                string fileName = $"screenshot_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString().Substring(0, 8)}.png";
+                string fullPath = Path.Combine(targetDir, fileName);
+
+                // L?u ?nh
+                bmp.Save(fullPath, ImageFormat.Png);
+
+                // Tr? v? ???ng d?n t??ng ??i n?u có repoRoot
+                if (repoRoot != null)
+                {
+                    return Path.GetRelativePath(repoRoot, fullPath).Replace(Path.DirectorySeparatorChar, '/');
+                }
+
+                return fullPath;
             }
-
-            // Tìm th? m?c root c?a repo (d?a trên .csproj)
-            string start = AppContext.BaseDirectory;
-            string repoRoot = FindRepoRoot(start);
-
-            string targetRoot = repoRoot ?? start;
-            string targetDir = Path.Combine(targetRoot, saveDirectoryRelative);
-            Directory.CreateDirectory(targetDir);
-
-            string fileName = $"screenshot_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString().Substring(0,8)}.png";
-            string fullPath = Path.Combine(targetDir, fileName);
-
-            // L?u ?nh
-            bmp.Save(fullPath, ImageFormat.Png);
-
-            // Tr? v? ???ng d?n t??ng ??i n?u có repoRoot
-            if (repoRoot != null)
-            {
-                return Path.GetRelativePath(repoRoot, fullPath).Replace(Path.DirectorySeparatorChar, '/');
-            }
-
-            return fullPath;
         }
 
         // Tìm th? m?c cha ch?a file project .csproj (gi?ng helper trong test)
