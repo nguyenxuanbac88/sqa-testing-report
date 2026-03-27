@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 
 namespace sqa_testing_report.Services
 {
@@ -23,8 +24,12 @@ namespace sqa_testing_report.Services
         /// </summary>
         /// <param name="saveDirectoryRelative">Th? m?c t??ng ??i ?? l?u, ví d? "Data/Screenshots"</param>
         /// <returns>???ng d?n t??ng ??i (ho?c tuy?t ??i n?u không tìm ???c repo root) c?a file ?nh ?ã l?u</returns>
+        [SupportedOSPlatform("windows")]
         public static string Capture(string saveDirectoryRelative = "Data/Screenshots")
         {
+            if (!OperatingSystem.IsWindows())
+                throw new PlatformNotSupportedException("ScreenshotService.Capture is supported only on Windows platforms.");
+
             // Xác ??nh kích th??c màn hình chính
             int width = GetSystemMetrics(SM_CXSCREEN);
             int height = GetSystemMetrics(SM_CYSCREEN);
