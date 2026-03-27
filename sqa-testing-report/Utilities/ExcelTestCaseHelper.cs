@@ -3,11 +3,11 @@ using sqa_testing_report.Models;
 
 namespace sqa_testing_report.Services
 {
-    public class ExcelTestCaseService
+    public class ExcelTestCaseHelper
     {
         private readonly string _excelPath;
 
-        public ExcelTestCaseService(string excelPath = null)
+        public ExcelTestCaseHelper(string excelPath = null)
         {
             _excelPath = excelPath ?? Path.Combine(AppContext.BaseDirectory, "Data", "DataTest.xlsx");
         }

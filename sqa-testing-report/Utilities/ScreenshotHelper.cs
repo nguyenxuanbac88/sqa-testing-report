@@ -1,4 +1,5 @@
-﻿using System.Drawing;
+﻿using sqa_testing_report.Utilities;
+using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -6,7 +7,7 @@ using System.Runtime.Versioning;
 namespace sqa_testing_report.Services
 {
     // Dịch vụ chụp ảnh màn hình - Đã nâng cấp tính năng đặt tên cố định và tự xóa ảnh cũ
-    public static class ScreenshotService
+    public static class ScreenshotHelper
     {
         // P/Invoke để lấy kích thước màn hình chính trên Windows
         [DllImport("user32.dll")]
@@ -40,7 +41,7 @@ namespace sqa_testing_report.Services
 
                 // Tìm thư mục root của repo (dựa trên .csproj)
                 string start = AppContext.BaseDirectory;
-                string repoRoot = FindRepoRoot(start);
+                string repoRoot = PathHelper.GetRepoRoot(start);
 
                 string targetRoot = repoRoot ?? start;
                 string targetDir = Path.Combine(targetRoot, saveDirectoryRelative);
@@ -79,18 +80,6 @@ namespace sqa_testing_report.Services
             }
         }
 
-        // Tìm thư mục cha chứa file project .csproj
-        private static string FindRepoRoot(string start)
-        {
-            var di = new DirectoryInfo(start);
-            while (di != null)
-            {
-                var csproj = Directory.GetFiles(di.FullName, "*.csproj");
-                if (csproj != null && csproj.Length > 0)
-                    return di.FullName;
-                di = di.Parent;
-            }
-            return null;
-        }
+
     }
 }
