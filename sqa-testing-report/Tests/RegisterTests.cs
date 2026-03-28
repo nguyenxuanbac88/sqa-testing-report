@@ -158,43 +158,76 @@ namespace sqa_testing_report.Tests
 
                 try
                 {
-                    string stepNum = step.StepNumber;
-                    string testData = step.TestData;
+                    string stepNum = step.StepNumber?.Trim();
+
+                    // Lấy dữ liệu từ Excel và dọn dẹp khoảng trắng 2 đầu
+                    string testData = step.TestData?.Trim() ?? "";
 
                     switch (stepNum)
                     {
-                        case "1": registerPage.OpenRegisterModal(); break;
-                        case "2": registerPage.EnterFullName(""); break;
-                        case "3": registerPage.EnterEmail(testData); break;
-                        case "4": registerPage.EnterPhone(testData); break;
-                        case "5": registerPage.SelectGender(testData); break;
-                        case "6": registerPage.SelectDOB(testData); break;
-                        case "7": registerPage.EnterPassword(testData); break;
-                        case "8": registerPage.EnterConfirmPassword(testData); break;
+                        case "1":
+                            registerPage.OpenRegisterModal();
+                            System.Threading.Thread.Sleep(500); // Đợi modal xổ xuống hoàn toàn
+                            step.ActualResult = "Đã mở form đăng ký thành công.";
+                            break;
+                        case "2":
+                            // Trong Excel ô này để trống, testData sẽ là "" (chuỗi rỗng)
+                            registerPage.EnterFullName(testData);
+                            step.ActualResult = "Đã để trống họ và tên.";
+                            break;
+                        case "3":
+                            registerPage.EnterEmail(testData);
+                            step.ActualResult = $"Đã nhập email: {testData}";
+                            break;
+                        case "4":
+                            registerPage.EnterPhone(testData);
+                            step.ActualResult = $"Đã nhập SĐT: {testData}";
+                            break;
+                        case "5":
+                            registerPage.SelectGender(testData);
+                            step.ActualResult = $"Đã chọn giới tính: {testData}";
+                            break;
+                        case "6":
+                            // Safeguard: Lọc bỏ phần giờ phút nếu Excel tự convert Ngày sinh thành DateTime
+                            string dob = testData.Contains(" ") ? testData.Split(' ')[0] : testData;
+                            registerPage.SelectDOB(dob);
+                            step.ActualResult = $"Đã chọn ngày sinh: {dob}";
+                            break;
+                        case "7":
+                            registerPage.EnterPassword(testData);
+                            step.ActualResult = "Đã nhập mật khẩu.";
+                            break;
+                        case "8":
+                            registerPage.EnterConfirmPassword(testData);
+                            step.ActualResult = "Đã nhập lại mật khẩu.";
+                            break;
                         case "9":
                             registerPage.SubmitRegistration();
+                            System.Threading.Thread.Sleep(500); // Đợi trình duyệt văng ra cái popup báo lỗi HTML5
                             Assert.IsTrue(registerPage.IsHtml5ValidationTriggered("name"), "Không trigger lỗi validation HTML5 cho trường Tên.");
                             step.ActualResult = "Hệ thống chặn submit và yêu cầu nhập họ tên.";
                             break;
                     }
 
-                    if (stepNum != "9") step.ActualResult = $"Thực hiện bước {stepNum} thành công.";
                     step.Status = "Pass";
                     step.Screenshots = "";
                 }
                 catch (Exception ex)
                 {
                     step.Status = "Fail";
-                    step.ActualResult = "Lỗi: " + ex.Message;
+                    step.ActualResult = "Lỗi Exception: " + ex.Message;
+
                     if (OperatingSystem.IsWindows())
                         step.Screenshots = ScreenshotHelper.Capture(tcId);
+
                     isPreviousStepFailed = true;
                 }
             }
 
             excelHelper.WriteTestCaseSteps(sheetName, steps);
+
             if (steps.Any(s => s.Status == "Fail"))
-                Assert.Fail($"Test Case {tcId} thất bại.");
+                Assert.Fail($"Test Case {tcId} thất bại. Xem file Excel cột Actual Result để biết gãy ở dòng nào.");
         }
 
         [Test]
@@ -223,43 +256,77 @@ namespace sqa_testing_report.Tests
 
                 try
                 {
-                    string stepNum = step.StepNumber;
-                    string testData = step.TestData;
+                    string stepNum = step.StepNumber?.Trim();
+
+                    // Lấy dữ liệu từ Excel và dọn dẹp khoảng trắng 2 đầu
+                    string testData = step.TestData?.Trim() ?? "";
 
                     switch (stepNum)
                     {
-                        case "1": registerPage.OpenRegisterModal(); break;
-                        case "2": registerPage.EnterFullName(testData); break;
-                        case "3": registerPage.EnterEmail("abc1234"); break;
-                        case "4": registerPage.EnterPhone(testData); break;
-                        case "5": registerPage.SelectGender(testData); break;
-                        case "6": registerPage.SelectDOB(testData); break;
-                        case "7": registerPage.EnterPassword(testData); break;
-                        case "8": registerPage.EnterConfirmPassword(testData); break;
+                        case "1":
+                            registerPage.OpenRegisterModal();
+                            System.Threading.Thread.Sleep(500); // Đợi modal xổ xuống hoàn toàn
+                            step.ActualResult = "Đã mở form đăng ký thành công.";
+                            break;
+                        case "2":
+                            registerPage.EnterFullName(testData);
+                            step.ActualResult = $"Đã nhập họ và tên: {testData}";
+                            break;
+                        case "3":
+                            registerPage.EnterEmail(testData); // Sẽ bốc giá trị "abc123" từ Excel
+                            step.ActualResult = $"Đã nhập email: {testData}";
+                            break;
+                        case "4":
+                            registerPage.EnterPhone(testData);
+                            step.ActualResult = $"Đã nhập SĐT: {testData}";
+                            break;
+                        case "5":
+                            registerPage.SelectGender(testData);
+                            step.ActualResult = $"Đã chọn giới tính: {testData}";
+                            break;
+                        case "6":
+                            // Safeguard: Lọc bỏ phần giờ phút nếu Excel tự convert Ngày sinh thành DateTime
+                            string dob = testData.Contains(" ") ? testData.Split(' ')[0] : testData;
+                            registerPage.SelectDOB(dob);
+                            step.ActualResult = $"Đã chọn ngày sinh: {dob}";
+                            break;
+                        case "7":
+                            registerPage.EnterPassword(testData);
+                            step.ActualResult = "Đã nhập mật khẩu.";
+                            break;
+                        case "8":
+                            registerPage.EnterConfirmPassword(testData);
+                            step.ActualResult = "Đã nhập lại mật khẩu.";
+                            break;
                         case "9":
                             registerPage.SubmitRegistration();
+                            System.Threading.Thread.Sleep(500); // Đợi trình duyệt văng ra cái popup báo lỗi HTML5
+
+                            // Kiểm tra xem trường Email có bị HTML5 validation chặn lại không (do abc123 thiếu @)
                             Assert.IsTrue(registerPage.IsHtml5ValidationTriggered("email"), "Không trigger lỗi validation HTML5 cho trường Email.");
-                            step.ActualResult = "Hệ thống chặn submit và báo lỗi định dạng email.";
+                            step.ActualResult = "Hệ thống chặn submit và báo lỗi định dạng email không hợp lệ.";
                             break;
                     }
 
-                    if (stepNum != "9") step.ActualResult = $"Thực hiện bước {stepNum} thành công.";
                     step.Status = "Pass";
                     step.Screenshots = "";
                 }
                 catch (Exception ex)
                 {
                     step.Status = "Fail";
-                    step.ActualResult = "Lỗi: " + ex.Message;
+                    step.ActualResult = "Lỗi Exception: " + ex.Message;
+
                     if (OperatingSystem.IsWindows())
                         step.Screenshots = ScreenshotHelper.Capture(tcId);
+
                     isPreviousStepFailed = true;
                 }
             }
 
             excelHelper.WriteTestCaseSteps(sheetName, steps);
+
             if (steps.Any(s => s.Status == "Fail"))
-                Assert.Fail($"Test Case {tcId} thất bại.");
+                Assert.Fail($"Test Case {tcId} thất bại. Xem file Excel cột Actual Result để biết gãy ở dòng nào.");
         }
     }
 }
