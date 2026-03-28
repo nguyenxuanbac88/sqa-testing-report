@@ -11,10 +11,9 @@ namespace sqa_testing_report.Pages
         public BookingPage(IWebDriver driver)
         {
             _driver = driver;
-            _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(15));
+            _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
         }
 
-        // BƯỚC 1.1: Chọn ngày chiếu dựa vào thuộc tính data-date
         public void SelectDate(string dateVal)
         {
             var dateBtn = _wait.Until(d => d.FindElement(By.CssSelector($"button[data-date='{dateVal}']")));
@@ -24,7 +23,6 @@ namespace sqa_testing_report.Pages
             js.ExecuteScript("arguments[0].click();", dateBtn);
         }
 
-        // BƯỚC 1.2: Click suất chiếu bằng Xpath cụ thể
         public void ClickShowtimeSpan()
         {
             var showtimeSpan = _wait.Until(d => d.FindElement(By.XPath("//*[@id='showtime-list']/div/div/span")));
@@ -34,32 +32,61 @@ namespace sqa_testing_report.Pages
             js.ExecuteScript("arguments[0].click();", showtimeSpan);
         }
 
-        // BƯỚC 3: TỰ ĐỘNG CHỌN GHẾ TRỐNG THEO SỐ LƯỢNG YÊU CẦU
+        // TỰ ĐỘNG LẤY DANH SÁCH GHẾ TRỐNG
+        public IList<IWebElement> GetAvailableSeatsList()
+        {
+            var xpath = "//div[contains(@class, 'seat') and contains(@class, 'available') and not(contains(@class, 'vip')) and not(contains(@class, 'double-seat')) and not(contains(@class, 'selected'))]";
+            return _wait.Until(d => d.FindElements(By.XPath(xpath)));
+        }
+
         public void SelectAvailableRegularSeats(int count)
         {
-            // Tìm tất cả các div có class 'seat' VÀ 'available' (Loại trừ ghế VIP, ghế Đôi, hoặc ghế đã chọn/bán)
-            var xpath = "//div[contains(@class, 'seat') and contains(@class, 'available') and not(contains(@class, 'vip')) and not(contains(@class, 'double-seat')) and not(contains(@class, 'selected'))]";
-
-            var availableSeats = _wait.Until(d => d.FindElements(By.XPath(xpath)));
-
-            if (availableSeats.Count < count)
-            {
-                throw new Exception($"Không đủ ghế trống! Yêu cầu {count} ghế, nhưng rạp chỉ còn {availableSeats.Count} ghế thường.");
-            }
+            var availableSeats = GetAvailableSeatsList();
+            if (availableSeats.Count < count) throw new Exception($"Không đủ ghế trống! Cần {count}.");
 
             IJavaScriptExecutor js = (IJavaScriptExecutor)_driver;
-
-            // Lặp để click đúng số lượng ghế
             for (int i = 0; i < count; i++)
             {
                 js.ExecuteScript("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", availableSeats[i]);
-                System.Threading.Thread.Sleep(400); // Đợi chút cho mượt
+                System.Threading.Thread.Sleep(300);
                 js.ExecuteScript("arguments[0].click();", availableSeats[i]);
-                System.Threading.Thread.Sleep(500); // Đợi web tính tiền
+                System.Threading.Thread.Sleep(300);
             }
         }
 
-        // BƯỚC 3 (Kiểm tra): Kiểm tra tổng tiền có đang hiển thị trên giao diện không
+        // TÌM VÀ CLICK 1 GHẾ ĐÃ BÁN BẤT KỲ
+        public void ClickAnySoldSeat()
+        {
+            // Tìm ghế có class sold, booked hoặc unavailable
+            var soldSeat = _wait.Until(d => d.FindElement(By.XPath("//div[contains(@class, 'seat') and (contains(@class, 'sold') or contains(@class, 'booked'))]")));
+            IJavaScriptExecutor js = (IJavaScriptExecutor)_driver;
+            js.ExecuteScript("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", soldSeat);
+            System.Threading.Thread.Sleep(300);
+            js.ExecuteScript("arguments[0].click();", soldSeat);
+        }
+
+        // LẤY TEXT TỪ POPUP CẢNH BÁO (JS ALERT HOẶC MODAL)
+        public string GetAlertTextAndAccept()
+        {
+            try
+            {
+                var alert = _wait.Until(d => d.SwitchTo().Alert());
+                string text = alert.Text;
+                alert.Accept();
+                return text;
+            }
+            catch
+            {
+                try
+                {
+                    // Dự phòng nếu dùng modal HTML thay vì JS Alert
+                    var modalBody = _driver.FindElement(By.CssSelector(".modal-body, .alert, .toast"));
+                    return modalBody.Text;
+                }
+                catch { return ""; }
+            }
+        }
+
         public bool IsTotalPriceDisplayed()
         {
             try
@@ -70,15 +97,39 @@ namespace sqa_testing_report.Pages
             catch { return false; }
         }
 
-        // BƯỚC 4: Nhấn nút Tiếp tục
         public void ClickContinue()
         {
-            // Tìm nút có chữ 'Tiếp tục' hoặc 'Continue' hoặc id='btnContinue'
             var btn = _wait.Until(d => d.FindElement(By.XPath("//button[contains(text(), 'Tiếp tục') or contains(text(), 'Continue') or @id='btnContinue']")));
             IJavaScriptExecutor js = (IJavaScriptExecutor)_driver;
             js.ExecuteScript("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", btn);
             System.Threading.Thread.Sleep(300);
             js.ExecuteScript("arguments[0].click();", btn);
+        }
+
+        public void ClickSimulateExpire()
+        {
+            var expireBtn = _wait.Until(d => d.FindElement(By.Id("testExpire"))); // Nhấn nút giả lập hết giờ
+            IJavaScriptExecutor js = (IJavaScriptExecutor)_driver;
+            js.ExecuteScript("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", expireBtn);
+            System.Threading.Thread.Sleep(300);
+            js.ExecuteScript("arguments[0].click();", expireBtn);
+        }
+
+        // CÁC HÀM CHO TRANG THANH TOÁN (TC_10)
+        public void CheckTermsAndCheckout()
+        {
+            IJavaScriptExecutor js = (IJavaScriptExecutor)_driver;
+            try
+            {
+                var chkTerms = _driver.FindElement(By.Id("agreeTerms")); // Sửa ID tùy thực tế web bạn
+                if (!chkTerms.Selected) js.ExecuteScript("arguments[0].click();", chkTerms);
+            }
+            catch { }
+
+            var btnCheckout = _wait.Until(d => d.FindElement(By.XPath("//button[contains(text(), 'Thanh toán') or contains(text(), 'Checkout')]")));
+            js.ExecuteScript("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", btnCheckout);
+            System.Threading.Thread.Sleep(500);
+            js.ExecuteScript("arguments[0].click();", btnCheckout);
         }
     }
 }
