@@ -149,6 +149,27 @@ namespace sqa_testing_report.Pages
             }
         }
 
+        // Hàm mới để lấy text từ Alert và đóng nó lại
+        public string GetAlertText()
+        {
+            try
+            {
+                // Chờ tối đa 5s cho Alert xuất hiện
+                IAlert alert = _wait.Until(d => d.SwitchTo().Alert());
+                string alertText = alert.Text;
+                alert.Accept(); // Nhấn OK để đóng Alert
+                return alertText;
+            }
+            catch (WebDriverTimeoutException)
+            {
+                return null; // Không có Alert nào xuất hiện
+            }
+            catch (NoAlertPresentException)
+            {
+                return null;
+            }
+        }
+
         public bool IsHtml5ValidationTriggered(string fieldName)
         {
             var input = _driver.FindElement(By.CssSelector($"#registerModal input[name='{fieldName}']"));
