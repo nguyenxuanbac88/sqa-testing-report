@@ -23,14 +23,25 @@ namespace sqa_testing_report.Pages
         {
             try
             {
+                // Tìm đúng cái nút có data-lang='vi'
                 var vnButton = _wait.Until(d => d.FindElement(By.CssSelector("button[data-lang='vi']")));
+
+                // Nếu nút VN CHƯA CÓ class 'active' (tức là web đang ở tiếng Anh)
                 if (!vnButton.GetAttribute("class").Contains("active"))
                 {
-                    vnButton.Click();
-                    System.Threading.Thread.Sleep(1000);
+                    // Dùng vũ khí JavaScript ép Click xuyên giáp 100% thành công
+                    IJavaScriptExecutor js = (IJavaScriptExecutor)_driver;
+                    js.ExecuteScript("arguments[0].click();", vnButton);
+
+                    // Chờ 1.5 giây để trang reload lại toàn bộ text sang tiếng Việt
+                    System.Threading.Thread.Sleep(1500);
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                // In lỗi ra console thay vì giấu đi bằng catch{} rỗng để dễ debug
+                Console.WriteLine("Cảnh báo: Không thể chuyển sang tiếng Việt - " + ex.Message);
+            }
         }
 
         public void OpenRegisterModal()
