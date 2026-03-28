@@ -116,5 +116,44 @@ namespace sqa_testing_report.Pages
             js.ExecuteScript("arguments[0].click();", showtimeBtn);
             _wait.Until(d => d.Url.Contains("/Movie/Details") || d.Url.Contains("/Seat"));
         }
+
+        // --- CÁC HÀM BỔ SUNG CHO TC_CINEMA_03 & TC_CINEMA_06 ---
+
+        public void NavigateToUrl(string fullUrl)
+        {
+            // Điều hướng trực tiếp bằng link từ Excel
+            _driver.Navigate().GoToUrl(fullUrl);
+        }
+
+        public string GetBodyText()
+        {
+            try { return _driver.FindElement(By.TagName("body")).Text; }
+            catch { return ""; }
+        }
+
+        public void SelectDateTabByText(string dateText)
+        {
+            // Xử lý thông minh: Nếu Excel truyền vào ngày có năm (VD: "10/04/2026"), 
+            // ta tự động cắt bỏ năm, chỉ giữ lại "10/04" để khớp với giao diện Web
+            if (dateText.Contains("/"))
+            {
+                var parts = dateText.Split('/');
+                if (parts.Length >= 2)
+                {
+                    // Ghép lại chỉ lấy phần tử đầu (Ngày) và phần tử thứ hai (Tháng)
+                    dateText = $"{parts[0]}/{parts[1]}";
+                }
+            }
+
+            // Tìm tab ngày linh hoạt bằng text hiển thị trên giao diện (VD: "10/04")
+            var dateTab = _wait.Until(d => d.FindElement(By.XPath($"//button[contains(., '{dateText}')]")));
+
+            IJavaScriptExecutor js = (IJavaScriptExecutor)_driver;
+            js.ExecuteScript("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", dateTab);
+            System.Threading.Thread.Sleep(500);
+
+            js.ExecuteScript("arguments[0].click();", dateTab);
+            System.Threading.Thread.Sleep(1500); // Đợi load lịch chiếu mới
+        }
     }
 }

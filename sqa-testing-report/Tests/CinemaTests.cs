@@ -240,6 +240,128 @@ namespace sqa_testing_report.Tests
             if (steps.Any(s => s.Status == "Fail"))
                 Assert.Fail($"Test Case thất bại. Xem file ảnh lỗi tại: Data/Screenshots/{tcId}.png");
         }
+
+        // ----------------------------------------------------
+        // TC_CINEMA_03: Kiểm tra truy cập rạp không tồn tại qua URL
+        // ----------------------------------------------------
+        [Test]
+        public void TC_CINEMA_03_TruyCapRapKhongTonTai()
+        {
+            string sheetName = "Bac_automationTC";
+            string tcId = "TC_CINEMA_03";
+
+            var steps = excelHelper.ReadTestCaseById(sheetName, tcId);
+            if (steps.Count == 0) Assert.Ignore($"Không tìm thấy {tcId}");
+
+            bool isPreviousStepFailed = false;
+
+            foreach (var step in steps)
+            {
+                if (isPreviousStepFailed)
+                {
+                    step.Status = "Fail";
+                    step.ActualResult = "Đánh giá Fail do bước trước đó thất bại.";
+                    step.Screenshots = null;
+                    continue;
+                }
+
+                try
+                {
+                    string action = step.StepAction.ToLower();
+                    string testData = step.TestData?.Trim() ?? "";
+
+                    if (step.StepNumber == "1" && action.Contains("nhập đường dẫn"))
+                    {
+                        // Lấy nguyên link từ Excel (vd: http://api.dvxuanbac.com:81/Cinema/GetCinema/666)
+                        cinemaPage.NavigateToUrl(testData);
+
+                        string bodyText = cinemaPage.GetBodyText();
+
+                        // Kiểm tra xem có văng thông báo "Cinema not found" như hình bạn gửi không
+                        bool isError = bodyText.Contains("Cinema not found") || bodyText.Contains("404") || bodyText.ToLower().Contains("không tồn tại");
+
+                        Assert.IsTrue(isError, "Hệ thống không hiển thị thông báo lỗi khi truy cập URL rạp không tồn tại.");
+                        step.ActualResult = "Hệ thống đã hiển thị lỗi: " + bodyText.Trim();
+                    }
+
+                    step.Status = "Pass";
+                    step.Screenshots = ""; // Xóa link ảnh cũ nếu Pass
+                }
+                catch (Exception ex)
+                {
+                    step.Status = "Fail";
+                    step.ActualResult = "Lỗi: " + ex.Message;
+                    if (OperatingSystem.IsWindows()) step.Screenshots = ScreenshotHelper.Capture(tcId);
+                    isPreviousStepFailed = true;
+                }
+            }
+
+            // ĐÃ SỬA LỖI Ở ĐÂY: Truyền steps vào thay vì tcId
+            excelHelper.WriteTestCaseSteps(sheetName, steps);
+
+            if (steps.Any(s => s.Status == "Fail"))
+                Assert.Fail($"Test Case thất bại. Xem file ảnh lỗi tại: Data/Screenshots/{tcId}.png");
+        }
+
+        // ----------------------------------------------------
+        // TC_CINEMA_06: Kiểm tra hiển thị lịch chiếu theo từng ngày cụ thể
+        // ----------------------------------------------------
+        [Test]
+        public void TC_CINEMA_06_KiemTraLichChieuTheoNgay()
+        {
+            string sheetName = "Bac_automationTC";
+            string tcId = "TC_CINEMA_06";
+
+            var steps = excelHelper.ReadTestCaseById(sheetName, tcId);
+            if (steps.Count == 0) Assert.Ignore($"Không tìm thấy {tcId}");
+
+            // Pre-condition: Mở trang Tất cả các rạp
+            cinemaPage.GoToGetAllCinemas();
+            cinemaPage.SwitchToVietnamese();
+
+            bool isPreviousStepFailed = false;
+
+            foreach (var step in steps)
+            {
+                if (isPreviousStepFailed) { step.Status = "Fail"; continue; }
+
+                try
+                {
+                    string action = step.StepAction.ToLower();
+                    string testData = step.TestData?.Trim() ?? "";
+
+                    if (step.StepNumber == "1" && action.Contains("click chọn rạp"))
+                    {
+                        cinemaPage.SelectCinema(testData); // Click "Galaxy Bến Tre"
+                        step.ActualResult = $"Đã chuyển hướng đến trang chi tiết rạp [{testData}].";
+                    }
+                    else if (step.StepNumber == "2" && action.Contains("click chọn một ngày"))
+                    {
+                        cinemaPage.ScrollToMoviesSection();
+
+                        // Click vào Tab có chữ giống trong Excel (VD: "28-Thg3")
+                        cinemaPage.SelectDateTabByText(testData);
+
+                        // Kiểm tra xem phim có hiện ra không
+                        Assert.IsTrue(cinemaPage.CheckMoviesSectionDisplay(), "Không hiển thị danh sách phim/suất chiếu cho ngày đã chọn.");
+                        step.ActualResult = $"Đã hiển thị danh sách phim và suất chiếu của ngày [{testData}].";
+                    }
+
+                    step.Status = "Pass";
+                    step.Screenshots = "";
+                }
+                catch (Exception ex)
+                {
+                    step.Status = "Fail";
+                    step.ActualResult = "Lỗi: " + ex.Message;
+                    if (OperatingSystem.IsWindows()) step.Screenshots = ScreenshotHelper.Capture(tcId);
+                    isPreviousStepFailed = true;
+                }
+            }
+
+            excelHelper.WriteTestCaseSteps(sheetName, steps);
+            if (steps.Any(s => s.Status == "Fail")) Assert.Fail($"{tcId} thất bại.");
+        }
     }
 
 }
