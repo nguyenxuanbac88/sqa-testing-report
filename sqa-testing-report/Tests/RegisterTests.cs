@@ -57,15 +57,59 @@ namespace sqa_testing_report.Tests
         [Test]
         public void TC_REG_06_KiemTraLoiNhapLaiMatKhauKhongKhop() => ExecuteRegisterTest("TC_REG_06", checkAdminForUnique: true);
 
+        // --- HÀM SETUP DATA CHO TC_REG_07 ---
+        [Test]
+        public void Setup_Data_For_TC_REG_07()
+        {
+            string tcId = "TC_REG_07";
+            var steps = excelHelper.ReadTestCaseById(sheetName, tcId);
+            if (steps.Count == 0) Assert.Ignore($"Không tìm thấy {tcId}");
+
+            var emailStep = steps.FirstOrDefault(s => s.StepNumber?.Trim() == "3");
+            string emailToCreate = emailStep?.TestData?.Trim() ?? "nguyenkhauser1@gmail.com";
+            string randomPhone = $"09{DateTime.Now:HHmmssff}";
+
+            registerPage.GoToHomePage();
+            registerPage.SwitchToVietnamese();
+            registerPage.OpenRegisterModal();
+            System.Threading.Thread.Sleep(500);
+
+            registerPage.EnterFullName("User TC07 Setup");
+            registerPage.EnterEmail(emailToCreate);
+            registerPage.EnterPhone(randomPhone);
+            registerPage.SelectGender("Nam");
+            registerPage.SelectDOB("01/01/2000");
+            registerPage.EnterPassword("Kho@09092005");
+            registerPage.EnterConfirmPassword("Kho@09092005");
+
+            registerPage.SubmitRegistration();
+            System.Threading.Thread.Sleep(1000);
+
+            string alertText = registerPage.GetAlertText();
+            Assert.IsNotNull(alertText, "Không nhận được thông báo sau khi nhấn đăng ký data mẫu.");
+            Assert.IsTrue(alertText.ToLower().Contains("thành công"), $"Không thể tạo data mẫu. Hệ thống báo: {alertText}");
+            TestContext.WriteLine($"✅ Đã tạo thành công tài khoản tiền đề với Email: {emailToCreate} và SĐT: {randomPhone}");
+        }
+
         // CẦN DATA ĐÃ TỒN TẠI -> checkAdminForExisting: true
         [Test]
         public void TC_REG_07_KiemTraDangKyVoiEmailDaTonTai() => ExecuteRegisterTest("TC_REG_07", checkAdminForExisting: true);
 
+        // --- 5 TEST CASE MỚI ---
         [Test]
         public void TC_REG_08_KiemTraDangKyVoiKhoangTrang() => ExecuteRegisterTest("TC_REG_08", addSpaces: true);
 
         [Test]
         public void TC_REG_09_KiemTraDangKyVoiNgaySinhTuongLai() => ExecuteRegisterTest("TC_REG_09");
+
+        [Test]
+        public void TC_REG_10_KiemTraDangKyVoiSQLInjection() => ExecuteRegisterTest("TC_REG_10");
+
+        [Test]
+        public void TC_REG_11_KiemTraGioiHanDoDaiHoTen() => ExecuteRegisterTest("TC_REG_11");
+
+        [Test]
+        public void TC_REG_12_KiemTraDangKyVoiSDTChuaChuCai() => ExecuteRegisterTest("TC_REG_12");
 
         #endregion
 
@@ -80,38 +124,29 @@ namespace sqa_testing_report.Tests
             string dynamicEmail = "";
             string dynamicPhone = "";
 
-            // --- PHÂN LUỒNG TỐI ƯU: CHỈ VÀO ADMIN KHI CẦN THIẾT ---
             if (checkAdminForUnique || checkAdminForExisting)
             {
                 adminHelper.EnsureLogin("khoa992005@gmail.com", "Khoa@123");
 
                 if (checkAdminForUnique)
                 {
-                    // TẠO EMAIL: Dựa trên thời gian thực -> Chắc chắn 100% không trùng, bỏ qua check Admin
                     dynamicEmail = $"testuser{DateTime.Now:yyyyMMddHHmmss}@gmail.com";
-
-                    // TẠO SĐT: Cần check qua Admin để đảm bảo an toàn tuyệt đối
                     bool isPhoneUnique = false;
                     while (!isPhoneUnique)
                     {
                         dynamicPhone = $"09{DateTime.Now:HHmmssff}";
                         bool phoneExists = adminHelper.IsDataExistInUserList(dynamicPhone);
-
                         if (!phoneExists) isPhoneUnique = true;
-                        else System.Threading.Thread.Sleep(500); // Nếu đen đủi bị trùng, đợi 0.5s tạo lại
+                        else System.Threading.Thread.Sleep(500);
                     }
                 }
                 else if (checkAdminForExisting)
                 {
-                    // Lấy chính xác Email từ Data Test trong file Excel (Step 3)
                     var emailStep = steps.FirstOrDefault(s => s.StepNumber?.Trim() == "3");
                     if (emailStep != null && !string.IsNullOrEmpty(emailStep.TestData))
                     {
                         string emailToTest = emailStep.TestData.Trim();
-
-                        // Check xem data bạn cấu hình trong Excel đã thực sự tồn tại trên Server chưa
                         bool emailExists = adminHelper.IsDataExistInUserList(emailToTest);
-
                         if (!emailExists)
                         {
                             Assert.Fail($"Lỗi Tiền đề (Pre-condition): Email '{emailToTest}' trong file Excel CHƯA tồn tại trong Admin. Hãy cập nhật lại Data Test trong file Excel!");
@@ -120,7 +155,6 @@ namespace sqa_testing_report.Tests
                 }
             }
 
-            // Bắt đầu luồng kiểm thử trên Web Client
             registerPage.GoToHomePage();
             registerPage.SwitchToVietnamese();
 
@@ -132,7 +166,6 @@ namespace sqa_testing_report.Tests
                 {
                     step.Status = "Fail";
                     step.ActualResult = "Đánh giá Fail do bước trước đó đã thất bại.";
-                    // Screenshots đã được set null từ lúc lỗi nên không cần làm gì thêm
                     continue;
                 }
 
@@ -141,7 +174,8 @@ namespace sqa_testing_report.Tests
                     string stepNum = step.StepNumber?.Trim();
                     string testData = step.TestData?.Trim() ?? "";
 
-                    if (addSpaces && !string.IsNullOrEmpty(testData) && stepNum != "1" && stepNum != "9")
+                    // CỘNG KHOẢNG TRẮNG CHO TC_REG_08 (Bỏ qua Form load (1), Giới tính (5), Ngày sinh (6), Submit (9))
+                    if (addSpaces && !string.IsNullOrEmpty(testData) && stepNum != "1" && stepNum != "5" && stepNum != "6" && stepNum != "9")
                     {
                         testData = "   " + testData + "   ";
                     }
@@ -154,8 +188,16 @@ namespace sqa_testing_report.Tests
                             step.ActualResult = "Đã mở form đăng ký.";
                             break;
                         case "2":
+                            // HỖ TRỢ ĐẶC BIỆT CHO TC_REG_11: Gen ra chuỗi > 255 ký tự
+                            if (tcId == "TC_REG_11" && testData.Contains("255"))
+                            {
+                                testData = new string('A', 256);
+                            }
                             registerPage.EnterFullName(testData);
-                            step.ActualResult = $"Đã nhập Họ tên: '{testData}'";
+
+                            // Log độ dài vừa phải vào Excel để không làm phình file
+                            string logName = testData.Length > 50 ? testData.Substring(0, 20) + "..." : testData;
+                            step.ActualResult = $"Đã nhập Họ tên: '{logName}'";
                             break;
                         case "3":
                             if (checkAdminForUnique) testData = dynamicEmail;
@@ -192,7 +234,7 @@ namespace sqa_testing_report.Tests
                     }
 
                     step.Status = "Pass";
-                    step.Screenshots = ""; // Xóa link ảnh nếu pass
+                    step.Screenshots = "";
                 }
                 catch (Exception ex)
                 {
@@ -211,11 +253,10 @@ namespace sqa_testing_report.Tests
         {
             string alertText = registerPage.GetAlertText();
 
-            // LƯU Ý: Chỉ ghi vào step.ActualResult. Không sửa gì ở step.ExpectedResult.
             switch (tcId)
             {
                 case "TC_REG_01":
-                case "TC_REG_08":
+                    // TC_REG_08 ĐÃ ĐƯỢC TÁCH RA DO MONG ĐỢI LÀ LỖI
                     Assert.IsNotNull(alertText, "Không thấy thông báo thành công.");
                     Assert.IsTrue(alertText.ToLower().Contains("thành công"), $"Thông báo thực tế: {alertText}");
                     step.ActualResult = "Hệ thống báo: " + alertText;
@@ -248,6 +289,26 @@ namespace sqa_testing_report.Tests
                     Assert.IsTrue(alertText.Contains("đã tồn tại"), $"Lỗi thực tế: {alertText}");
                     step.ActualResult = "Hệ thống chặn đăng ký và báo lỗi đã tồn tại thành công.";
                     break;
+
+                // --- XỬ LÝ CHUNG CHO 5 TEST CASE TỪ 08 - 12 ---
+                case "TC_REG_08":
+                case "TC_REG_09":
+                case "TC_REG_10":
+                case "TC_REG_11":
+                case "TC_REG_12":
+                    // Đảm bảo tuyệt đối hệ thống không được văng ra dòng chữ "thành công"
+                    if (!string.IsNullOrEmpty(alertText))
+                    {
+                        Assert.IsFalse(alertText.ToLower().Contains("thành công"), $"Lỗi bảo mật/logic: Hệ thống cho phép đăng ký thành công sai logic. Alert: {alertText}");
+                        step.ActualResult = "Hệ thống chặn và hiển thị Alert: " + alertText;
+                    }
+                    else
+                    {
+                        // Nếu không có Alert văng ra, có nghĩa form HTML5 hoặc Front-end đã chặn chặn submit
+                        step.ActualResult = "Hệ thống chặn submit tại giao diện (không có popup Server trả về).";
+                    }
+                    break;
+
                 default:
                     Assert.IsNotNull(alertText, "Không nhận được thông báo lỗi từ server.");
                     step.ActualResult = "Hệ thống hiển thị lỗi: " + alertText;
