@@ -57,40 +57,6 @@ namespace sqa_testing_report.Tests
         [Test]
         public void TC_REG_06_KiemTraLoiNhapLaiMatKhauKhongKhop() => ExecuteRegisterTest("TC_REG_06", checkAdminForUnique: true);
 
-        // --- HÀM SETUP DATA CHO TC_REG_07 ---
-        [Test]
-        public void Setup_Data_For_TC_REG_07()
-        {
-            string tcId = "TC_REG_07";
-            var steps = excelHelper.ReadTestCaseById(sheetName, tcId);
-            if (steps.Count == 0) Assert.Ignore($"Không tìm thấy {tcId}");
-
-            var emailStep = steps.FirstOrDefault(s => s.StepNumber?.Trim() == "3");
-            string emailToCreate = emailStep?.TestData?.Trim() ?? "nguyenkhauser1@gmail.com";
-            string randomPhone = $"09{DateTime.Now:HHmmssff}";
-
-            registerPage.GoToHomePage();
-            registerPage.SwitchToVietnamese();
-            registerPage.OpenRegisterModal();
-            System.Threading.Thread.Sleep(500);
-
-            registerPage.EnterFullName("User TC07 Setup");
-            registerPage.EnterEmail(emailToCreate);
-            registerPage.EnterPhone(randomPhone);
-            registerPage.SelectGender("Nam");
-            registerPage.SelectDOB("01/01/2000");
-            registerPage.EnterPassword("Kho@09092005");
-            registerPage.EnterConfirmPassword("Kho@09092005");
-
-            registerPage.SubmitRegistration();
-            System.Threading.Thread.Sleep(1000);
-
-            string alertText = registerPage.GetAlertText();
-            Assert.IsNotNull(alertText, "Không nhận được thông báo sau khi nhấn đăng ký data mẫu.");
-            Assert.IsTrue(alertText.ToLower().Contains("thành công"), $"Không thể tạo data mẫu. Hệ thống báo: {alertText}");
-            TestContext.WriteLine($"✅ Đã tạo thành công tài khoản tiền đề với Email: {emailToCreate} và SĐT: {randomPhone}");
-        }
-
         // CẦN DATA ĐÃ TỒN TẠI -> checkAdminForExisting: true
         [Test]
         public void TC_REG_07_KiemTraDangKyVoiEmailDaTonTai() => ExecuteRegisterTest("TC_REG_07", checkAdminForExisting: true);
@@ -105,8 +71,9 @@ namespace sqa_testing_report.Tests
         [Test]
         public void TC_REG_10_KiemTraDangKyVoiSQLInjection() => ExecuteRegisterTest("TC_REG_10");
 
+        // CẦN DATA MỚI ĐỂ TRÁNH LỖI TRÙNG LẶP ĐÈ LÊN LỖI MAXLENGTH -> checkAdminForUnique: true
         [Test]
-        public void TC_REG_11_KiemTraGioiHanDoDaiHoTen() => ExecuteRegisterTest("TC_REG_11");
+        public void TC_REG_11_KiemTraGioiHanDoDaiHoTen() => ExecuteRegisterTest("TC_REG_11", checkAdminForUnique: true);
 
         [Test]
         public void TC_REG_12_KiemTraDangKyVoiSDTChuaChuCai() => ExecuteRegisterTest("TC_REG_12");
@@ -188,10 +155,10 @@ namespace sqa_testing_report.Tests
                             step.ActualResult = "Đã mở form đăng ký.";
                             break;
                         case "2":
-                            // HỖ TRỢ ĐẶC BIỆT CHO TC_REG_11: Gen ra chuỗi > 255 ký tự
-                            if (tcId == "TC_REG_11" && testData.Contains("255"))
+                            // SỬA Ở ĐÂY: Gen ra chuỗi 1000 ký tự cho TC_REG_11
+                            if (tcId == "TC_REG_11" && (testData.Contains("255") || testData.Contains("1000")))
                             {
-                                testData = new string('A', 256);
+                                testData = new string('A', 1000);
                             }
                             registerPage.EnterFullName(testData);
 
