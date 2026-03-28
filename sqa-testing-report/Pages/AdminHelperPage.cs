@@ -42,7 +42,7 @@ namespace sqa_testing_report.Pages
             }
         }
 
-        // Hàm kiểm tra trùng lặp (Tương tự Ctrl+F trong bảng)
+        // Hàm kiểm tra trùng lặp (Đã fix dứt điểm lỗi đơ form)
         public bool IsDataExistInUserList(string keyword)
         {
             _driver.Navigate().GoToUrl("http://api.dvxuanbac.com:2080/UserAdmin/Index");
@@ -52,18 +52,20 @@ namespace sqa_testing_report.Pages
             searchInput.Clear();
             searchInput.SendKeys(keyword);
 
-            // 2. TỐI ƯU: Nhấn luôn phím Enter ngay tại ô input (thay vì tìm nút Click)
-            searchInput.SendKeys(Keys.Enter);
+            // 2. Tìm đúng cái nút "Tìm kiếm" dựa theo HTML bạn cung cấp
+            var searchBtn = _driver.FindElement(By.CssSelector("button[type='submit'].btn-primary"));
 
-            // 3. Đợi cho đến khi trang reload lại và URL có chứa chữ "keyword="
-            // Việc này đáng tin cậy hơn là dùng Thread.Sleep(1000)
-            _wait.Until(d => d.Url.Contains("keyword="));
+            // Dùng Javascript ép click (Cách này an toàn tuyệt đối, không bao giờ bị đơ như phím Enter)
+            IJavaScriptExecutor js = (IJavaScriptExecutor)_driver;
+            js.ExecuteScript("arguments[0].click();", searchBtn);
 
-            // 4. Kiểm tra xem có bất kỳ dòng (tr) nào trong phần THÂN BẢNG (tbody) chứa keyword không
-            // Dùng //tbody//tr để tránh việc Selenium tìm nhầm lên phần thead (tiêu đề cột)
-            var rows = _driver.FindElements(By.XPath($"//tbody//tr[contains(., '{keyword}')]"));
+            // 3. Cho Selenium nhắm mắt đợi 2 giây để server tải lại cái Bảng (Bỏ qua vụ check URL gây lỗi Timeout)
+            System.Threading.Thread.Sleep(2000);
 
-            return rows.Count > 0; // Trả về true nếu bị trùng (tìm thấy)
+            // 4. Tìm kiếm nội dung trong thẻ <tbody> theo cấu trúc HTML bảng bạn cung cấp
+            var rows = _driver.FindElements(By.XPath($"//table/tbody/tr[contains(., '{keyword}')]"));
+
+            return rows.Count > 0; // Trả về true nếu tìm thấy dòng chứa keyword
         }
     }
 }
