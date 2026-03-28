@@ -49,8 +49,9 @@ namespace sqa_testing_report.Tests
         [Test]
         public void TC_REG_05_KiemTraLoiMatKhauYeu() => ExecuteRegisterTest("TC_REG_05");
 
+        // SỬA Ở ĐÂY: Thêm isSuccessCase: true để báo hàm chung tự sinh Email và SĐT động, chống lỗi trùng lặp
         [Test]
-        public void TC_REG_06_KiemTraLoiNhapLaiMatKhauKhongKhop() => ExecuteRegisterTest("TC_REG_06");
+        public void TC_REG_06_KiemTraLoiNhapLaiMatKhauKhongKhop() => ExecuteRegisterTest("TC_REG_06", isSuccessCase: true);
 
         [Test]
         public void TC_REG_07_KiemTraDangKyVoiEmailDaTonTai() => ExecuteRegisterTest("TC_REG_07");
@@ -76,7 +77,7 @@ namespace sqa_testing_report.Tests
 
             bool isPreviousStepFailed = false;
 
-            // Tạo data động cho TC_REG_01
+            // Tạo data động cho trường hợp được gọi
             string dynamicEmail = $"testuser{DateTime.Now:yyyyMMddHHmmss}@gmail.com";
             string dynamicPhone = $"09{DateTime.Now:HHmmssff}";
 
@@ -196,7 +197,6 @@ namespace sqa_testing_report.Tests
 
                 case "TC_REG_05":
                     Assert.IsNotNull(alertText, "Không thấy Alert báo lỗi mật khẩu yếu.");
-                    // SỬA Ở ĐÂY: Đổi từ "ít nhất 6 ký tự" thành "không đúng định dạng"
                     Assert.IsTrue(alertText.Contains("không đúng định dạng"), $"Lỗi thực tế: {alertText}");
                     step.ActualResult = "Hệ thống báo lỗi mật khẩu không đúng định dạng thành công.";
                     break;
@@ -214,8 +214,5 @@ namespace sqa_testing_report.Tests
                     break;
             }
         }
-
-
-
     }
 }
