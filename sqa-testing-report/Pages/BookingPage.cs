@@ -153,5 +153,38 @@ namespace sqa_testing_report.Pages
             try { return _wait.Until(d => d.FindElement(By.ClassName("ticket-modal"))).Displayed; }
             catch { return false; }
         }
+
+        // BỔ SUNG VÀO CUỐI FILE BookingPage.cs HIỆN TẠI:
+
+        public void ClickQuayLai()
+        {
+            var btnQuayLai = _wait.Until(d => d.FindElement(By.XPath("//button[contains(text(), 'Quay lại') or contains(@class, 'btn-outline-secondary')]")));
+            ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'}); arguments[0].click();", btnQuayLai);
+        }
+
+        public void EnterAndApplyVoucher(string voucherCode)
+        {
+            // Tùy vào ID hoặc class thực tế của ô nhập voucher trên hệ thống của bạn, bạn chỉnh lại selector nhé
+            var inputVoucher = _wait.Until(d => d.FindElement(By.XPath("//input[@placeholder='Mã khuyến mãi' or @name='voucher']")));
+            inputVoucher.Clear();
+            inputVoucher.SendKeys(voucherCode);
+
+            var btnApply = _driver.FindElement(By.XPath("//button[contains(text(), 'Áp dụng')]"));
+            ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'}); arguments[0].click();", btnApply);
+        }
+
+        public void CloseModal()
+        {
+            try
+            {
+                // Nhấn nút Đóng hoặc X hoặc phím ESC
+                var closeBtn = _wait.Until(d => d.FindElement(By.XPath("//button[contains(text(), 'Đóng') or @class='btn-close']")));
+                ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].click();", closeBtn);
+            }
+            catch
+            {
+                new OpenQA.Selenium.Interactions.Actions(_driver).SendKeys(Keys.Escape).Perform();
+            }
+        }
     }
 }
