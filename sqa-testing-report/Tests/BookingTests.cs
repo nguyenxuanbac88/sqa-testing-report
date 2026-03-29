@@ -44,6 +44,7 @@ namespace sqa_testing_report.Tests
         [Test] public void TC_BOOK_06_ChanChonGheDaBan() => ExecuteBookingTest("TC_BOOK_06");
         [Test] public void TC_BOOK_07_GioiHan8Ghe() => ExecuteBookingTest("TC_BOOK_07");
         [Test] public void TC_BOOK_10_KiemTraThanhToan() => ExecuteBookingTest("TC_BOOK_10");
+        [Test] public void TC_BOOK_11_GheThuongVaVip() => ExecuteBookingTest("TC_BOOK_11");
 
         private void ExecuteBookingTest(string tcId)
         {
@@ -421,6 +422,73 @@ namespace sqa_testing_report.Tests
                                 Assert.IsTrue(driver.Url.ToLower().Contains("paypal"), "Lỗi: Không chuyển hướng được sang trang thanh toán PayPal.");
 
                                 step.ActualResult = "Chuyển hướng sang cổng thanh toán PayPal thành công.";
+                            }
+                            // ==============================================
+                            // [TC_BOOK_11] - CHỌN KẾT HỢP GHẾ THƯỜNG & VIP
+                            // ==============================================
+                            else if (tcId == "TC_BOOK_11" && action.Contains("nhấn chọn 01 ghế thường và 01 ghế vip"))
+                            {
+                                // 1. Chọn ghế VIP
+                                var vipSeats = driver.FindElements(By.CssSelector(".seat.vip.available:not(.selected)"));
+                                if (vipSeats.Count == 0) throw new Exception("Không có ghế VIP trống để test.");
+
+                                var chosenVip = vipSeats.First();
+                                string vipSeatId = chosenVip.GetAttribute("data-id");
+                                string vipTitle = chosenVip.GetAttribute("title"); // Lấy title chứa giá (VD: "C5 - VIP - 130,000đ")
+
+                                ((IJavaScriptExecutor)driver).ExecuteScript("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'}); arguments[0].click();", chosenVip);
+                                System.Threading.Thread.Sleep(500);
+
+                                // 2. Chọn ghế thường (Loại trừ hoàn toàn hàng A bằng cách bỏ các data-id bắt đầu bằng 'A')
+                                var regSeats = driver.FindElements(By.CssSelector(".seat.available:not(.vip):not(.double-seat):not(.selected)"))
+                                                     .Where(s => s.GetAttribute("data-id") != null && !s.GetAttribute("data-id").StartsWith("A"))
+                                                     .ToList();
+                                if (regSeats.Count == 0) throw new Exception("Không có ghế thường trống để test.");
+
+                                var chosenReg = regSeats.Last(); // Vẫn dùng Last() nhưng giờ chắc chắn nó sẽ lấy hàng sát VIP (hàng D) chứ không dính hàng A
+                                string regSeatId = chosenReg.GetAttribute("data-id");
+                                string regTitle = chosenReg.GetAttribute("title"); // Lấy title chứa giá (VD: "D5 - Thường - 110,000đ")
+
+                                ((IJavaScriptExecutor)driver).ExecuteScript("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'}); arguments[0].click();", chosenReg);
+                                System.Threading.Thread.Sleep(1000); // Đợi UI tính toán lại tổng tiền
+
+                                // 3. Xác minh ghế đã đổi màu
+                                bool isVipSelected = chosenVip.GetAttribute("class").Contains("selected");
+                                bool isRegSelected = chosenReg.GetAttribute("class").Contains("selected");
+                                Assert.IsTrue(isVipSelected && isRegSelected, "Ghế click vào nhưng không đổi màu sang trạng thái đang chọn.");
+
+                                // 4. TÍNH TOÁN GIÁ TIỀN ĐỘNG (Dynamic Pricing)
+                                int GetPriceFromTitle(string title)
+                                {
+                                    try
+                                    {
+                                        // Tách chuỗi theo dấu "-" và lấy phần cuối cùng, loại bỏ 'đ', ',' và khoảng trắng
+                                        var parts = title.Split('-');
+                                        string priceStr = parts.Last().Replace("đ", "").Replace(",", "").Replace(".", "").Trim();
+                                        return int.Parse(priceStr);
+                                    }
+                                    catch { return 0; }
+                                }
+
+                                int expectedTotal = GetPriceFromTitle(vipTitle) + GetPriceFromTitle(regTitle);
+
+                                // Đọc tổng tiền hiển thị trên màn hình
+                                var totalAmountLabel = driver.FindElement(By.Id("totalAmount"));
+                                string totalText = totalAmountLabel.Text.Replace(",", "").Replace(".", "").Trim();
+                                int actualTotal = int.Parse(totalText);
+
+                                Assert.IsTrue(actualTotal == expectedTotal && actualTotal > 0, $"Hệ thống tính sai tổng tiền! Kỳ vọng (từ giá ghế): {expectedTotal}, Thực tế UI: {actualTotal}");
+
+                                // Ghi log thông minh (Update luôn giá trị linh động vào Excel)
+                                step.ActualResult = $"Ghế đổi màu cam; Tổng cộng hiển thị đúng {expectedTotal:#,##0} VNĐ (Đã auto-chọn VIP: {vipSeatId} và Thường: {regSeatId}).";
+                            }
+                            else if (tcId == "TC_BOOK_11" && action.Contains("tiếp tục"))
+                            {
+                                bookingPage.ClickContinue();
+                                System.Threading.Thread.Sleep(2000);
+
+                                Assert.IsTrue(driver.Url.ToLower().Contains("combo"), "Hệ thống không chuyển sang trang Chọn Combo / Sản phẩm.");
+                                step.ActualResult = "Hệ thống chấp nhận lựa chọn và chuyển sang trang \"Chọn Combo / Sản phẩm\".";
                             }
                             else
                             {
