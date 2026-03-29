@@ -112,5 +112,23 @@ namespace sqa_testing_report.Pages
             IJavaScriptExecutor js = (IJavaScriptExecutor)_driver;
             return (bool)js.ExecuteScript("return !arguments[0].validity.valid;", input);
         }
+
+        // Bổ sung cho TC_BOOK_01: Kiểm tra popup Đăng nhập có đang hiển thị không
+        public bool IsLoginModalDisplayed()
+        {
+            try
+            {
+                var modal = _wait.Until(d => d.FindElement(By.Id("loginModal")));
+                return modal.Displayed;
+            }
+            catch (WebDriverTimeoutException)
+            {
+                return false;
+            }
+            catch (NoSuchElementException)
+            {
+                return false;
+            }
+        }
     }
 }
