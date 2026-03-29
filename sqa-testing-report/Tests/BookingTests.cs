@@ -6,7 +6,7 @@ using sqa_testing_report.Utilities;
 namespace sqa_testing_report.Tests
 {
     [TestFixture]
-    public class BookingTests
+    public partial class BookingTests
     {
         private IWebDriver driver;
         private ExcelTestCaseHelper excelHelper;
