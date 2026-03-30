@@ -16,7 +16,10 @@ namespace sqa_testing_report.Pages
         private readonly By _inputCinemaName = By.CssSelector("#CinemaName");
         private readonly By _inputAddress = By.CssSelector("#Address");
         private readonly By _inputCity = By.CssSelector("#City");
-        private readonly By _btnSubmit = By.CssSelector("button[type='submit'].btn-success");
+
+        // Nút Create và Nút Update khác class nhau
+        private readonly By _btnSubmitCreate = By.CssSelector("button[type='submit'].btn-success");
+        private readonly By _btnSubmitUpdate = By.CssSelector("button[type='submit'].btn-primary");
 
         // Locators cho phần hiển thị thông báo
         private readonly By _successAlert = By.CssSelector(".alert.alert-success");
@@ -79,8 +82,15 @@ namespace sqa_testing_report.Pages
 
         public void ClickSubmit()
         {
-            _driver.FindElement(_btnSubmit).Click();
-            Thread.Sleep(2000); // Đợi xử lý submit và chuyển trang
+            _driver.FindElement(_btnSubmitCreate).Click();
+            Thread.Sleep(2000);
+        }
+
+        // Bổ sung hàm Submit riêng cho trang Update
+        public void ClickUpdateSubmit()
+        {
+            _driver.FindElement(_btnSubmitUpdate).Click();
+            Thread.Sleep(2000); // Đợi xử lý submit và đá về danh sách
         }
 
         public bool IsCinemaExist(string cinemaName)
@@ -100,6 +110,17 @@ namespace sqa_testing_report.Pages
                 return _driver.FindElement(By.CssSelector("table tbody tr.clickable-row td span.text-main")).Text;
             }
             catch { return "Galaxy Nguyễn Du"; } // Fallback
+        }
+
+        // Bổ sung hàm lấy rạp thứ 2 để ép trùng lặp cho Update
+        public string GetSecondCinemaName()
+        {
+            try
+            {
+                var elements = _driver.FindElements(By.CssSelector("table tbody tr.clickable-row td span.text-main"));
+                return elements.Count > 1 ? elements[1].Text : "Galaxy Tân Phú";
+            }
+            catch { return "Galaxy Tân Phú"; }
         }
 
         // Click thẳng vào dòng đầu tiên (Rạp vừa tạo sẽ nằm trên cùng)
