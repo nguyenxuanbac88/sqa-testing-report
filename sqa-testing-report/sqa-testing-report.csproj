@@ -32,4 +32,10 @@
     <Folder Include="Data\Screenshots\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Data\DataTest.xlsx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
