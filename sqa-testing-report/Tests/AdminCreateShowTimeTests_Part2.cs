@@ -34,7 +34,7 @@ namespace sqa_testing_report.Tests
                 // --- DATA CHUẨN ĐỂ ĐIỀN FORM ---
                 string cinema = "Galaxy Bến Tre";
                 string room = "Phòng 1";
-                DateTime targetDate = new DateTime(2026, 5, 15);
+                DateTime targetDate = new DateTime(2026, 5, 20);
                 string dateToFill = "";
                 string movie = "Khá";
                 string time = "08:00 AM";
@@ -98,7 +98,7 @@ namespace sqa_testing_report.Tests
                         }
                         else if (action.Contains("không chọn ngày chiếu") || action.Contains("chọn ngày chiếu"))
                         {
-                            actualMsg = string.IsNullOrEmpty(dateToFill) ? "Đã xóa trắng/bỏ trống ô Ngày chiếu (hiển thị mặc định mm/dd/yyyy)." : $"Đã nhập Ngày chiếu {targetDate:dd/MM/yyyy}.";
+                            actualMsg = string.IsNullOrEmpty(dateToFill) ? "Đã xóa trắng/bỏ trống ô Ngày chiếu." : $"Đã nhập Ngày chiếu {targetDate:dd/MM/yyyy}.";
                         }
                         else if (action.Contains("phim"))
                         {
@@ -141,8 +141,8 @@ namespace sqa_testing_report.Tests
                                 };
 
                                 string validationMsg = validationPage.GetValidationMessage(fieldToCheck);
-                                Assert.IsTrue(!string.IsNullOrEmpty(validationMsg), $"Lỗi: Không hiển thị popup validation HTML5 tại ô {fieldToCheck}.");
-                                actualMsg = $"Hệ thống báo lỗi popup mặc định: '{validationMsg}' tại ô trống và chặn không cho Lưu.";
+                                Assert.IsTrue(!string.IsNullOrEmpty(validationMsg), $"Lỗi: Không có popup cảnh báo tại ô {fieldToCheck}.");
+                                actualMsg = $"Hiển thị lỗi: '{validationMsg}' và không cho Lưu.";
                             }
                             else if (step.ExpectedResult.Contains("chặn") || step.ExpectedResult.Contains("không tạo"))
                             {
@@ -161,9 +161,9 @@ namespace sqa_testing_report.Tests
                                 // Kiểm tra xem suất chiếu có bị lọt qua khe cửa hẹp tạo thành công không
                                 bool isCreated = validationPage.IsShowtimeDisplayedOnTimeline(room, movie, time);
 
-                                Assert.IsFalse(isCreated, "Lỗi Nghiêm Trọng: Hệ thống báo chặn nhưng suất chiếu KHÔNG HỢP LỆ VẪN ĐƯỢC TẠO trên Timeline!");
+                                Assert.IsFalse(isCreated, "Suất chiếu không hợp lệ vẫn được tạo trên Timeline.");
 
-                                actualMsg = "Hệ thống chặn thành công. Đã kiểm tra lại Timeline và xác nhận suất chiếu không được tạo.";
+                                actualMsg = "Không tạo suất chiếu trên Timeline.";
                             }
                         }
 
