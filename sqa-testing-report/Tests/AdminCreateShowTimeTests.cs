@@ -164,5 +164,127 @@ namespace sqa_testing_report.Tests
                 if (steps.Any(s => s.Status == "Fail")) Assert.Fail($"{tcId} thất bại.");
             }
         }
+
+        // ==========================================================
+        // TC_SHOW_03: Kiểm tra tạo suất chiếu trùng (Không hiện lỗi, check số lượng)
+        // ==========================================================
+        [Test]
+        public void TC_SHOW_03_KiemTraTaoSuatChieuTrung()
+        {
+            string tcId = "TC_SHOW_03";
+            var steps = _excelHelper.ReadTestCaseById(_sheetName, tcId);
+            if (steps.Count == 0) Assert.Ignore($"Không tìm thấy {tcId} trong file Excel");
+
+            try
+            {
+                _loginPage.GoToPage();
+                _loginPage.Login("khoa992005@gmail.com", "Khoa@123");
+                Assert.IsTrue(_loginPage.IsLoginSuccessful(), "Pre-condition thất bại.");
+
+                _showTimePage.NavigateToTimeline();
+                Thread.Sleep(1000);
+
+                DateTime targetDate = new DateTime(2026, 4, 16);
+                string cinemaToTest = "Galaxy Bến Tre";
+                string movieToTest = "Khá";
+                string startTimeToTest = "08:00 AM";
+
+                string selectedBookedRoom = "";
+                int initialShowtimeCount = 0;
+                int maxRetries = 10;
+                bool isBookedRoomFound = false;
+
+                bool isPreviousStepFailed = false;
+                bool isScreenshotCaptured = false;
+
+                foreach (var step in steps)
+                {
+                    if (isPreviousStepFailed) { step.Status = "Fail"; continue; }
+
+                    try
+                    {
+                        string actualMsg = "";
+
+                        switch (step.StepNumber)
+                        {
+                            case "1":
+                            case "2":
+                                // Tìm kiếm một phòng ĐÃ CÓ lịch chiếu
+                                if (!isBookedRoomFound)
+                                {
+                                    for (int i = 0; i < maxRetries; i++)
+                                    {
+                                        _showTimePage.SelectCinemaAndDate(cinemaToTest, targetDate);
+                                        _showTimePage.ClickLoadTimeline();
+
+                                        var bookedRooms = _showTimePage.GetBookedRooms();
+
+                                        if (bookedRooms.Count > 0)
+                                        {
+                                            selectedBookedRoom = bookedRooms.First(); // Lấy phòng đầu tiên đã có lịch
+                                            initialShowtimeCount = _showTimePage.CountShowtimesInRoom(selectedBookedRoom);
+                                            isBookedRoomFound = true;
+
+                                            _showTimePage.ClickAddShowtime();
+                                            break;
+                                        }
+                                        else
+                                        {
+                                            targetDate = targetDate.AddDays(1);
+                                        }
+                                    }
+                                    Assert.IsTrue(isBookedRoomFound, $"Không tìm thấy phòng nào có lịch chiếu sẵn trong {maxRetries} ngày.");
+                                }
+                                actualMsg = $"Mở Modal, chọn ngày {targetDate:dd/MM/yyyy} và phòng đã có lịch ({selectedBookedRoom}).";
+                                break;
+
+                            case "3":
+                                // Cố tình tạo trùng giờ vào phòng đã có lịch
+                                _showTimePage.FillShowtimeDetails(movieToTest, selectedBookedRoom, startTimeToTest, "15000", "1");
+                                _showTimePage.SaveShowtime();
+                                actualMsg = "Đã nhập thông tin trùng lặp và lưu thành công.";
+                                break;
+
+                            case "4":
+                                // Check lại số lượng suất chiếu
+                                _showTimePage.SelectCinemaAndDate(cinemaToTest, targetDate);
+                                _showTimePage.ClickLoadTimeline();
+
+                                int finalShowtimeCount = _showTimePage.CountShowtimesInRoom(selectedBookedRoom);
+
+                                // Assert: Nếu count tăng lên tức là hệ thống cho phép trùng -> Fail
+                                Assert.AreEqual(initialShowtimeCount, finalShowtimeCount, $"Lỗi: Hệ thống cho tạo suất trùng! Số lượng tăng từ {initialShowtimeCount} lên {finalShowtimeCount}.");
+
+                                actualMsg = "Không tạo thêm suất chiếu trùng. Số lượng giữ nguyên.";
+                                break;
+
+                            default:
+                                actualMsg = "Bỏ qua step.";
+                                break;
+                        }
+
+                        step.ActualResult = actualMsg;
+                        step.Status = "Pass";
+                        step.Screenshots = "";
+                    }
+                    catch (Exception ex)
+                    {
+                        step.Status = "Fail";
+                        step.ActualResult = "Lỗi: " + ex.Message.Split('\n')[0];
+                        if (!isScreenshotCaptured && OperatingSystem.IsWindows())
+                        {
+                            step.Screenshots = ScreenshotHelper.Capture(tcId);
+                            isScreenshotCaptured = true;
+                        }
+                        isPreviousStepFailed = true;
+                    }
+                }
+            }
+            finally
+            {
+                _excelHelper.WriteTestCaseSteps(_sheetName, steps);
+                if (steps.Any(s => s.Status == "Fail")) Assert.Fail($"{tcId} thất bại.");
+            }
+        }
     }
 }

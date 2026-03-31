@@ -152,5 +152,20 @@ namespace sqa_testing_report.Pages
                 return false;
             }
         }
+
+        // --- BỔ SUNG: Hàm đếm tổng số suất chiếu của một phòng ---
+        public int CountShowtimesInRoom(string roomName)
+        {
+            try
+            {
+                string xpath = $"//div[contains(@class, 'g-row')][.//div[contains(@class, 'g-row-label') and contains(text(), '{roomName}')]]//div[contains(@class, 'g-bar')]";
+                var showtimes = _driver.FindElements(By.XPath(xpath));
+                return showtimes.Count;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
     }
 }
