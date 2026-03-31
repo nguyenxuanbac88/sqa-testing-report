@@ -6,7 +6,7 @@ using sqa_testing_report.Utilities;
 namespace sqa_testing_report.Tests
 {
     [TestFixture]
-    public class AdminCreateShowTimeTests
+    public partial class AdminCreateShowTimeTests
     {
         private IWebDriver _driver;
         private AdminLoginPage _loginPage;
