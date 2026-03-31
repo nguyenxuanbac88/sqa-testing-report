@@ -56,16 +56,17 @@ namespace sqa_testing_report.Tests
                 // --- BIẾN DỮ LIỆU ĐỘNG ---
                 DateTime targetDate = new DateTime(2026, 4, 15);
                 string cinemaToTest = "Galaxy Bến Tre";
-                string movieToTest = "Phim Điện Ảnh Thám Tử Lừng Danh Conan: Dư Ảnh Của Độc Nhãn";
+                string movieToTest = "Khá";
                 string startTimeToTest = "08:00 AM";
                 string selectedRoom = "";
-                int maxRetries = 10; // Thử tối đa 10 ngày kế tiếp nếu phòng full
+                int maxRetries = 10;
                 bool isRoomFound = false;
 
                 // ==============================
                 // EVALUATE STEPS
                 // ==============================
                 bool isPreviousStepFailed = false;
+                bool isScreenshotCaptured = false; // Cờ kiểm soát chỉ chụp 1 ảnh
 
                 foreach (var step in steps)
                 {
@@ -79,7 +80,6 @@ namespace sqa_testing_report.Tests
                         {
                             case "1":
                             case "2":
-                                // Gộp logic Step 1 & 2 thành Vòng lặp quét phòng động
                                 if (!isRoomFound)
                                 {
                                     for (int i = 0; i < maxRetries; i++)
@@ -91,56 +91,50 @@ namespace sqa_testing_report.Tests
 
                                         _showTimePage.ClickAddShowtime();
                                         var allRooms = _showTimePage.GetAllRoomsFromModal();
-
-                                        // Tìm phòng trống (có trong allRooms nhưng chưa có trong bookedRooms)
                                         var freeRooms = allRooms.Except(bookedRooms).ToList();
 
                                         if (freeRooms.Count > 0)
                                         {
-                                            selectedRoom = freeRooms.First(); // Lấy phòng trống đầu tiên
+                                            selectedRoom = freeRooms.First();
                                             isRoomFound = true;
-                                            break; // Đã tìm thấy phòng, thoát vòng lặp giữ Modal mở
+                                            break;
                                         }
                                         else
                                         {
-                                            // Hết phòng, đóng Modal, cộng thêm 1 ngày và thử lại
                                             _showTimePage.CloseModal();
                                             targetDate = targetDate.AddDays(1);
                                         }
                                     }
 
-                                    Assert.IsTrue(isRoomFound, $"Không tìm thấy phòng trống nào trong {maxRetries} ngày liên tiếp tính từ 15/04/2026.");
+                                    Assert.IsTrue(isRoomFound, $"Hết phòng trống trong {maxRetries} ngày.");
                                 }
-                                actualMsg = $"Đã check và tìm được phòng trống: {selectedRoom} vào ngày {targetDate:dd/MM/yyyy}. Modal Thêm lịch chiếu đang mở.";
+                                actualMsg = $"Đã mở Modal, chọn ngày {targetDate:dd/MM/yyyy} và phòng {selectedRoom}.";
                                 break;
 
                             case "3":
-                                // Nhập thông tin với Phòng Động vừa tìm được
                                 _showTimePage.FillShowtimeDetails(
                                     movieName: movieToTest,
                                     roomName: selectedRoom,
                                     startTime: startTimeToTest,
                                     price: "15000",
-                                    typeValue: "1" // Suất chiếu thường
+                                    typeValue: "1"
                                 );
                                 _showTimePage.SaveShowtime();
-                                actualMsg = $"Đã nhập đủ thông tin cho phòng {selectedRoom}, loại suất chiếu 1. Nhấn Lưu và Modal đóng lại.";
+                                actualMsg = "Đã nhập thông tin và lưu thành công.";
                                 break;
 
                             case "4":
-                                // Chọn lại đúng Rạp và Ngày vừa chốt được ở trên
                                 _showTimePage.SelectCinemaAndDate(cinemaToTest, targetDate);
                                 _showTimePage.ClickLoadTimeline();
 
-                                // Validate kết quả tạo mới (check cả Phòng, Tên phim và Giờ bắt đầu)
                                 bool isCreated = _showTimePage.IsShowtimeDisplayedOnTimeline(selectedRoom, movieToTest, startTimeToTest);
-                                Assert.IsTrue(isCreated, $"Lỗi: Lịch chiếu vừa tạo KHÔNG hiển thị trên Timeline (Phòng: {selectedRoom}, Ngày: {targetDate:dd/MM/yyyy}).");
+                                Assert.IsTrue(isCreated, "Lịch chiếu không hiển thị trên Timeline.");
 
-                                actualMsg = $"Lịch chiếu vừa tạo hiển thị chính xác trên Timeline của {selectedRoom} lúc {startTimeToTest}.";
+                                actualMsg = "Lịch chiếu hiển thị đúng trên Timeline.";
                                 break;
 
                             default:
-                                actualMsg = "Bỏ qua step không xác định.";
+                                actualMsg = "Bỏ qua step.";
                                 break;
                         }
 
@@ -151,10 +145,14 @@ namespace sqa_testing_report.Tests
                     catch (Exception ex)
                     {
                         step.Status = "Fail";
-                        step.ActualResult = "Lỗi: " + ex.Message;
-                        if (OperatingSystem.IsWindows())
+                        // Lấy dòng lỗi đầu tiên cho ngắn gọn
+                        step.ActualResult = "Lỗi: " + ex.Message.Split('\n')[0];
+
+                        if (!isScreenshotCaptured && OperatingSystem.IsWindows())
                         {
-                            step.Screenshots = ScreenshotHelper.Capture($"{tcId}_Step{step.StepNumber}");
+                            // Chụp duy nhất 1 ảnh lưu bằng tên TestCaseID
+                            step.Screenshots = ScreenshotHelper.Capture(tcId);
+                            isScreenshotCaptured = true;
                         }
                         isPreviousStepFailed = true;
                     }
