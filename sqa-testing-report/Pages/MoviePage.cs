@@ -98,5 +98,29 @@ namespace sqa_testing_report.Pages
         {
             return _driver.FindElement(By.TagName("body")).Text;
         }
+
+        // =======================================================
+        // CÁC HÀM BỔ SUNG CHO CHỨC NĂNG ĐẶT VÉ (Không ảnh hưởng code cũ)
+        // =======================================================
+
+        public void SelectDateTabByDateAttribute(string dateVal)
+        {
+            // Tìm theo thuộc tính data-date (VD: "2026-04-20")
+            var dateTab = _wait.Until(d => d.FindElement(By.CssSelector($"button[data-date='{dateVal}']")));
+            IJavaScriptExecutor js = (IJavaScriptExecutor)_driver;
+            js.ExecuteScript("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", dateTab);
+            System.Threading.Thread.Sleep(500);
+            js.ExecuteScript("arguments[0].click();", dateTab);
+        }
+
+        public void ClickShowtimeBadge(string time)
+        {
+            // Tìm thẻ span chứa giờ chiếu (VD: "08:00")
+            var showtime = _wait.Until(d => d.FindElement(By.XPath($"//span[contains(@class, 'showtime-badge') and contains(text(), '{time}')]")));
+            IJavaScriptExecutor js = (IJavaScriptExecutor)_driver;
+            js.ExecuteScript("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", showtime);
+            System.Threading.Thread.Sleep(500);
+            js.ExecuteScript("arguments[0].click();", showtime);
+        }
     }
 }
