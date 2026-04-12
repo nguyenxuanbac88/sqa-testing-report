@@ -73,12 +73,12 @@ namespace sqa_testing_report.Tests
                     else if (step.StepNumber == "2" && action.Contains("cuộn màn hình"))
                     {
                         cinemaPage.ScrollToMoviesSection();
-                        cinemaPage.SelectDateTab("2026-04-10");
+                        cinemaPage.SelectDateTab("2026-04-20");
                         step.ActualResult = "Đã cuộn đến danh sách phim và chọn thành công Tab ngày 10/04/2026.";
                     }
                     else if (step.StepNumber == "3" && action.Contains("kiểm tra vị trí"))
                     {
-                        cinemaPage.ClickShowtime("2026-04-10", "Khá", "11:00");
+                        cinemaPage.ClickShowtime("2026-04-20", "Khá", "8:00");
                         step.ActualResult = "Các suất chiếu nằm gọn dưới tên phim Khá. Đã nhấn vào suất chiếu thành công.";
                     }
 

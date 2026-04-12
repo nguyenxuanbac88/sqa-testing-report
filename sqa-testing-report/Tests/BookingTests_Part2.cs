@@ -90,8 +90,8 @@ namespace sqa_testing_report.Tests
                                 if (doubleSeats.Count < 2) throw new Exception("Không có đủ cụm ghế đôi trống để test.");
 
                                 // Trích xuất giá từ cụm ghế đầu tiên để linh động với giá hệ thống
-                                string titleText = doubleSeats[0].FindElements(By.XPath("..")).FirstOrDefault()?.GetAttribute("title") ?? "150000";
-                                int doubleSeatPrice = 150000; // Giá mặc định nếu không parse được
+                                string titleText = doubleSeats[0].FindElements(By.XPath("..")).FirstOrDefault()?.GetAttribute("title") ?? "250000";
+                                int doubleSeatPrice = 250000; // Giá mặc định nếu không parse được
                                 try
                                 {
                                     // Thử parse giá từ title nếu HTML ghế đôi có chứa
