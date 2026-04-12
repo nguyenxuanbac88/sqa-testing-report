@@ -55,7 +55,7 @@ namespace sqa_testing_report.Tests
 
             try
             {
-                moviePage.NavigateToMovieUrl("http://api.dvxuanbac.com:81/Movie/Details/131");
+                moviePage.NavigateToMovieUrl("http://api.dvxuanbac.com:81/Movie/Details/162");
                 moviePage.SwitchToVietnamese();
 
                 // Setup luồng chạy đến trang Chọn Ghế cho các TC cần thiết
@@ -118,7 +118,7 @@ namespace sqa_testing_report.Tests
 
                                 // 2. Mở trình duyệt 2 (Người dùng 2)
                                 driver2 = DriverFactory.InitDriver();
-                                driver2.Navigate().GoToUrl("http://api.dvxuanbac.com:81/Movie/Details/131");
+                                driver2.Navigate().GoToUrl("http://api.dvxuanbac.com:81/Movie/Details/162");
 
                                 var moviePage2 = new MoviePage(driver2);
                                 moviePage2.SwitchToVietnamese();
